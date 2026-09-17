@@ -1,0 +1,20 @@
+.env
+.venv/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+data/raw_pdfs/
+data/processed/
+data/faiss_store/
+
+*.log
+
+.DS_Store
+
+# IDE
+.vscode/
+
+# Generated frontend/cache files
+.streamlit/
