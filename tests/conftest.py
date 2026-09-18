@@ -7,7 +7,9 @@ import pytest
 from pypdf import PdfWriter
 
 from backend.core.models import Chunk
-from fakes import DeterministicEmbedder
+from backend.rag.service import RagService
+from backend.retrieval.service import RetrievalService
+from fakes import DeterministicEmbedder, FakeGenerator, FakeReranker
 
 
 def _add_page(writer: PdfWriter, text: str) -> None:
@@ -67,6 +69,32 @@ def deterministic_embedder() -> DeterministicEmbedder:
 def tmp_store_dir(tmp_path: Path) -> Path:
     """Isolated FAISS store directory for a single test."""
     return tmp_path / "faiss_store"
+
+
+@pytest.fixture
+def retrieval_service(tmp_store_dir: Path, deterministic_embedder) -> RetrievalService:
+    """Phase 2 retriever wired to a temp store and a model-free embedder."""
+    return RetrievalService(store_dir=tmp_store_dir, embedder=deterministic_embedder)
+
+
+@pytest.fixture
+def fake_reranker() -> FakeReranker:
+    """Model-free reranker double (records calls)."""
+    return FakeReranker()
+
+
+@pytest.fixture
+def fake_generator() -> FakeGenerator:
+    """Model-free answer generator double (records prompts)."""
+    return FakeGenerator()
+
+
+@pytest.fixture
+def rag_service(retrieval_service, fake_reranker, fake_generator) -> RagService:
+    """RAG service with all three collaborators faked: no weights, no API key."""
+    return RagService(
+        retrieval=retrieval_service, reranker=fake_reranker, generator=fake_generator
+    )
 
 
 @pytest.fixture

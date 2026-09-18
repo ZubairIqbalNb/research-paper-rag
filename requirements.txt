@@ -7,10 +7,18 @@ python-multipart==0.0.20
 sentence-transformers==6.0.1
 faiss-cpu==1.15.1
 numpy==2.5.3
+# Gemini SDK: "google-generativeai" is deprecated/EOL (2025-11-30); google-genai is
+# the supported client and its own docs advise keeping the version below 3.0.0.
+google-genai==2.24.0
+python-dotenv==1.2.3
 
 # CPU-only PyTorch is installed separately, because the default Linux wheels
 # bundle CUDA and pull multi-GB nvidia-* dependencies:
 #   pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
+#
+# Phase 3 models (cached, not committed): sentence-transformers/all-MiniLM-L6-v2
+# and cross-encoder/ms-marco-MiniLM-L6-v2 are downloaded on first use into
+# ~/.cache/huggingface. Secrets live in a gitignored .env (see .env.example).
 
 # Dev / testing
 httpx==0.28.1
