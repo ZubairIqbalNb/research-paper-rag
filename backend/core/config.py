@@ -12,7 +12,7 @@ from functools import lru_cache
 
 from dotenv import load_dotenv
 
-DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 
 
 class ConfigurationError(Exception):

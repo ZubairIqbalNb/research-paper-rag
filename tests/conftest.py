@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 from pypdf import PdfWriter
 
+import backend.embeddings.embedder as embedder_module
+import backend.reranking.reranker as reranker_module
 from backend.core.models import Chunk
 from backend.rag.service import RagService
 from backend.retrieval.service import RetrievalService
@@ -95,6 +97,22 @@ def rag_service(retrieval_service, fake_reranker, fake_generator) -> RagService:
     return RagService(
         retrieval=retrieval_service, reranker=fake_reranker, generator=fake_generator
     )
+
+
+@pytest.fixture(autouse=True)
+def _reset_default_model_singletons(monkeypatch):
+    """Isolate the process-wide default embedder/reranker caches per test.
+
+    ``get_default_embedder()`` / ``get_default_reranker()`` cache a single
+    instance per module so weights load at most once per process (intended
+    production behavior). The opt-in live smoke test loads the real weights on
+    those shared instances; without a reset that loaded state leaks into the
+    ``is_loaded is False`` lazy-loading assertions, making the suite
+    order-dependent. Snapshot-and-restore around every test keeps each test
+    starting from a pristine cache without touching production code.
+    """
+    monkeypatch.setattr(embedder_module, "_DEFAULT_EMBEDDER", None)
+    monkeypatch.setattr(reranker_module, "_DEFAULT_RERANKER", None)
 
 
 @pytest.fixture
