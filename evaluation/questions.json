@@ -1,0 +1,122 @@
+[
+  {
+    "id": "q01",
+    "category": "problem_objective",
+    "question": "What degradation problem do the authors identify when increasing the depth of plain neural networks?",
+    "reference_answer": "As network depth increases, the accuracy of plain networks can saturate and then degrade rapidly. Importantly, the paper reports that this degradation is not caused by overfitting: deeper plain networks can have higher training error than shallower networks, indicating an optimization difficulty.",
+    "answerable": true,
+    "expected_pages": [1, 2]
+  },
+  {
+    "id": "q02",
+    "category": "methodology",
+    "question": "What is the main idea behind residual learning in the paper?",
+    "reference_answer": "Instead of having stacked layers directly learn an underlying mapping H(x), the layers are trained to learn a residual mapping F(x) = H(x) - x. The original mapping is then represented as F(x) + x. The authors hypothesize that learning this residual mapping is easier to optimize.",
+    "answerable": true,
+    "expected_pages": [2, 3]
+  },
+  {
+    "id": "q03",
+    "category": "methodology",
+    "question": "How do shortcut connections implement the residual learning formulation?",
+    "reference_answer": "Shortcut connections skip one or more layers and perform an identity mapping. Their outputs are added element-wise to the outputs of the stacked layers, implementing the F(x) + x formulation. Identity shortcuts add neither extra parameters nor computational complexity.",
+    "answerable": true,
+    "expected_pages": [2, 3]
+  },
+  {
+    "id": "q04",
+    "category": "architecture",
+    "question": "When does the paper use a projection shortcut instead of a simple identity shortcut?",
+    "reference_answer": "When the input and output dimensions do not match, such as when the number of channels changes, the paper uses a linear projection shortcut to match the dimensions. The projection is implemented using a 1×1 convolution in the ImageNet architectures.",
+    "answerable": true,
+    "expected_pages": [3, 4]
+  },
+  {
+    "id": "q05",
+    "category": "architecture",
+    "question": "What is the bottleneck building block used for the deeper ResNet architectures?",
+    "reference_answer": "For the deeper ImageNet networks, the residual function uses three layers: a 1×1 convolution to reduce dimensions, a 3×3 convolution operating on the smaller representation, and a 1×1 convolution to restore the dimensions.",
+    "answerable": true,
+    "expected_pages": [6, 7]
+  },
+  {
+    "id": "q06",
+    "category": "implementation",
+    "question": "What training configuration did the authors use for their ImageNet experiments?",
+    "reference_answer": "They trained the models from scratch using SGD with a mini-batch size of 256. The learning rate started at 0.1 and was divided by 10 when the error plateaued. They used weight decay of 0.0001 and momentum of 0.9, and did not use dropout.",
+    "answerable": true,
+    "expected_pages": [4]
+  },
+  {
+    "id": "q07",
+    "category": "dataset_setup",
+    "question": "What was the ImageNet experimental setup used in the paper?",
+    "reference_answer": "The ImageNet 2012 classification dataset was used, containing 1000 classes. The models were trained on 1.28 million training images and evaluated on 50,000 validation images, with a final result also obtained on 100,000 test images through the test server.",
+    "answerable": true,
+    "expected_pages": [4]
+  },
+  {
+    "id": "q08",
+    "category": "results",
+    "question": "How did the 34-layer ResNet compare with the 18-layer ResNet on ImageNet validation in Table 2?",
+    "reference_answer": "The 18-layer ResNet had a top-1 error of 27.88%, while the 34-layer ResNet had a top-1 error of 25.03%. Thus, the deeper 34-layer ResNet achieved a 2.85 percentage-point lower top-1 error in that comparison.",
+    "answerable": true,
+    "expected_pages": [5]
+  },
+  {
+    "id": "q09",
+    "category": "results",
+    "question": "What top-5 validation error did the single-model ResNet-152 achieve on ImageNet?",
+    "reference_answer": "The ResNet-152 achieved a 4.49% top-5 error on the ImageNet validation set.",
+    "answerable": true,
+    "expected_pages": [6, 7]
+  },
+  {
+    "id": "q10",
+    "category": "cifar10",
+    "question": "What happened when the authors increased the depth of ResNets on CIFAR-10?",
+    "reference_answer": "The ResNets continued to overcome the optimization difficulty observed in plain networks and showed accuracy gains as depth increased. The paper reports ResNet models ranging from 20 to 110 layers and also explores a 1202-layer network.",
+    "answerable": true,
+    "expected_pages": [7, 8]
+  },
+  {
+    "id": "q11",
+    "category": "analysis",
+    "question": "Why did the 1202-layer ResNet perform worse than the 110-layer ResNet on CIFAR-10 despite achieving very low training error?",
+    "reference_answer": "The authors argue that the 1202-layer network was unnecessarily large for the relatively small CIFAR-10 dataset and suffered from overfitting. They note that the 1202-layer model achieved less than 0.1% training error but had a 7.93% test error, worse than the 110-layer model.",
+    "answerable": true,
+    "expected_pages": [8]
+  },
+  {
+    "id": "q12",
+    "category": "generalization",
+    "question": "What improvement did replacing VGG-16 with ResNet-101 produce on the COCO object detection experiment?",
+    "reference_answer": "Using ResNet-101 instead of VGG-16 produced a 6.0% increase in COCO's standard mAP@[.5, .95] metric, which the authors report as a 28% relative improvement.",
+    "answerable": true,
+    "expected_pages": [8]
+  },
+  {
+    "id": "q13",
+    "category": "unanswerable",
+    "question": "What was the exact inference latency of ResNet-152 in milliseconds on the hardware used by the authors?",
+    "reference_answer": null,
+    "answerable": false,
+    "expected_pages": []
+  },
+  {
+    "id": "q14",
+    "category": "unanswerable",
+    "question": "What was the ResNet-152 accuracy on the MNIST test dataset?",
+    "reference_answer": null,
+    "answerable": false,
+    "expected_pages": []
+  },
+  {
+    "id": "q15",
+    "category": "unanswerable",
+    "question": "What was the total electricity consumption in kilowatt-hours required to train the 152-layer ResNet?",
+    "reference_answer": null,
+    "answerable": false,
+    "expected_pages": []
+  }
+]
