@@ -26,3 +26,19 @@ class Chunk:
     chunk_index: int  # ordinal across the whole source document
     page_number: int  # 1-based page this chunk's text came from
     source: str
+
+
+@dataclass
+class RetrievedChunk:
+    """A search hit: a Chunk's citation metadata plus its similarity score.
+
+    Added in Phase 2. Carries the same four metadata fields as ``Chunk`` so a
+    result can always be traced back to its source document and page, plus the
+    cosine similarity score produced by the vector store.
+    """
+
+    text: str
+    chunk_index: int
+    page_number: int  # 1-based
+    source: str
+    score: float  # cosine similarity in [-1, 1]

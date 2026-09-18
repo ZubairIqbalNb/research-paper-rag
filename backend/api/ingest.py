@@ -1,22 +1,16 @@
 """POST /ingest: upload a PDF, extract page text, return page-aware chunks.
 
-Thin wiring layer: validation lives here, extraction and chunking live in
-backend.ingestion. Deliberately no storage yet — a later phase will persist
-chunks for embeddings/FAISS.
+Thin wiring layer: the shared validation/extraction pipeline lives in
+``backend.api.uploads``, chunking lives in ``backend.ingestion``. Still
+deliberately stateless — ``POST /index`` (Phase 2) is what persists chunks for
+embeddings/FAISS.
 """
-import tempfile
-from pathlib import Path
+from fastapi import APIRouter, File, UploadFile
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
-
-from backend.ingestion.chunker import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, chunk_pages
-from backend.ingestion.pdf_parser import extract_pages
+from backend.api.uploads import chunks_from_upload
+from backend.ingestion.chunker import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
-
-ALLOWED_CONTENT_TYPES = {"application/pdf"}
-# UploadFile guarantees a filename; keep a defensive fallback anyway.
-_FALLBACK_FILENAME = "upload.pdf"
 
 
 @router.post("")
@@ -30,45 +24,9 @@ async def ingest_pdf(
     Query params:
         chunk_size / chunk_overlap: optional splitter overrides (validated).
     """
-    filename = file.filename or _FALLBACK_FILENAME
-
-    # 1. Validate file type.
-    content_type = (file.content_type or "").lower()
-    if not filename.lower().endswith(".pdf") and content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(status_code=415, detail="Unsupported file type: only PDFs are accepted")
-
-    # 2. Read and sanity-check: empty uploads and non-PDF bytes are rejected
-    # early via the %PDF- magic header (real parsing errors surface later).
-    data = await file.read()
-    if not data.startswith(b"%PDF-"):
-        raise HTTPException(
-            status_code=422,
-            detail="File is empty or not a valid PDF (missing %PDF- header)",
-        )
-
-    if chunk_size < chunk_overlap or chunk_size <= 0 or chunk_overlap < 0:
-        raise HTTPException(
-            status_code=422,
-            detail="chunk_size must be positive and >= chunk_overlap",
-        )
-
-    # 3. Persist to a temp file for pdfplumber, then extract + chunk.
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-            tmp.write(data)
-            tmp_path = Path(tmp.name)
-        pages = extract_pages(tmp_path, source_label=filename)
-    except FileNotFoundError:  # defensive: tmp file we just wrote
-        raise HTTPException(status_code=500, detail="Internal error: temp file missing")
-    except ValueError as exc:
-        # Unreadable PDF, or no extractable text (e.g. scanned/image-only).
-        raise HTTPException(status_code=422, detail=str(exc))
-    finally:
-        if tmp_path is not None:
-            tmp_path.unlink(missing_ok=True)
-
-    chunks = chunk_pages(pages, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    filename, pages, chunks = chunks_from_upload(
+        file, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
     return _build_response(filename, pages, chunks)
 
 

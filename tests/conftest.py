@@ -1,10 +1,13 @@
-"""Shared pytest fixtures for Phase 1 tests."""
+"""Shared pytest fixtures for Phase 1 (ingestion) and Phase 2 (retrieval) tests."""
 import io
 import textwrap
 from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
+
+from backend.core.models import Chunk
+from fakes import DeterministicEmbedder
 
 
 def _add_page(writer: PdfWriter, text: str) -> None:
@@ -52,3 +55,29 @@ def _pdf_bytes(page_texts: list[str]) -> bytes:
 def pdf_bytes_factory():
     """Expose the in-memory PDF builder to tests (avoids import tricks)."""
     return _pdf_bytes
+
+
+@pytest.fixture
+def deterministic_embedder() -> DeterministicEmbedder:
+    """Model-free embedder: Phase 2 tests never load (or download) weights."""
+    return DeterministicEmbedder()
+
+
+@pytest.fixture
+def tmp_store_dir(tmp_path: Path) -> Path:
+    """Isolated FAISS store directory for a single test."""
+    return tmp_path / "faiss_store"
+
+
+@pytest.fixture
+def make_chunks():
+    """Factory: build Phase 1 ``Chunk`` objects from (text, source, page) specs.
+
+    ``chunk_index`` is assigned as a global ordinal, matching Phase 1 semantics.
+    """
+    def _make(specs: list[tuple[str, str, int]]) -> list[Chunk]:
+        return [
+            Chunk(text=text, chunk_index=index, page_number=page_number, source=source)
+            for index, (text, source, page_number) in enumerate(specs)
+        ]
+    return _make
