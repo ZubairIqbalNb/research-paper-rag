@@ -2,7 +2,9 @@
 fastapi==0.141.1
 uvicorn==0.53.0
 pdfplumber==0.11.10
-langchain-text-splitters==0.3.11
+# Bumped from 0.3.11: the RAGAS stack pulls langchain 1.x, which requires 1.x.
+# The page-aware chunker's RecursiveCharacterTextSplitter API is unchanged.
+langchain-text-splitters==1.1.2
 python-multipart==0.0.20
 sentence-transformers==6.0.1
 faiss-cpu==1.15.1
@@ -25,3 +27,16 @@ httpx==0.28.1
 pypdf==6.1.1
 pytest==9.1.1
 reportlab==4.4.10
+
+# Evaluation (Phase 4 RAGAS layer). Used only by evaluation/ragas_eval.py; the
+# runtime pipeline does not import it. ragas 0.4.3 imports
+# langchain_community.chat_models.vertexai, which was removed in
+# langchain-community 0.4, so the 0.3.x line is pinned. instructor >= 1.17 provides
+# instructor.from_genai (needed for the Gemini judge) and jsonref is required for
+# its Google structured output. openai 2.x is the window that satisfies both
+# instructor (>=2) and langchain-openai (<3).
+ragas==0.4.3
+langchain-community==0.3.31
+instructor==1.17.0
+jsonref==1.1.0
+openai==2.54.0
