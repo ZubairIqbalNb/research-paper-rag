@@ -1,5 +1,8 @@
 # Runtime
 fastapi==0.141.1
+# Phase 5 frontend. The Streamlit app is a thin HTTP client over the FastAPI
+# backend and reuses the already-pinned httpx for its requests.
+streamlit==1.64.0
 uvicorn==0.53.0
 pdfplumber==0.11.10
 # Bumped from 0.3.11: the RAGAS stack pulls langchain 1.x, which requires 1.x.
