@@ -1,6 +1,6 @@
 # API Reference
 
-The backend is a FastAPI application defined in `health.py` (module-level
+The backend is a FastAPI application defined in `main.py` (module-level
 `app`). Routes are grouped in `backend/api/`: `ingest.py` (`/ingest`),
 `retrieval.py` (`/index`, `/search`) and `ask.py` (`/ask`).
 

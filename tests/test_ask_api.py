@@ -12,7 +12,7 @@ from backend.rag.prompt import INSUFFICIENT_EVIDENCE_MARKER
 from backend.rag.service import RagService
 from backend.reranking.reranker import DEFAULT_RERANK_MODEL
 from fakes import FakeGenerator, FakeReranker
-from health import app
+from main import app
 
 PAGE_ONE = "Retrieval evaluation metrics measure ranking quality of search systems at length."
 PAGE_TWO = "Photosynthesis converts sunlight into chemical energy inside plant chloroplasts."

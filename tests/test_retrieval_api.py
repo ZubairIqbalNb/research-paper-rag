@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from backend.api.retrieval import get_retrieval_service
 from backend.retrieval.service import RetrievalService
 from backend.retrieval.vector_store import INDEX_FILENAME, METADATA_FILENAME
-from health import app
+from main import app
 
 PAGE_ONE = "Retrieval evaluation metrics measure ranking quality of search systems at length."
 PAGE_TWO = "Photosynthesis converts sunlight into chemical energy inside plant chloroplasts."

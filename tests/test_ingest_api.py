@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 
-from health import app
+from main import app
 
 
 @pytest.fixture

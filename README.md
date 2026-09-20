@@ -22,16 +22,17 @@ is a thin client.
 6. [Installation](#installation)
 7. [Configuration](#configuration)
 8. [Running the application](#running-the-application)
-9. [API reference](#api-reference)
-10. [Grounding and abstention](#grounding-and-abstention)
-11. [Citations](#citations)
-12. [Evaluation](#evaluation)
-13. [RAGAS](#ragas)
-14. [Testing](#testing)
-15. [Validation example](#validation-example)
-16. [Known limitations](#known-limitations)
-17. [Security and secrets](#security-and-secrets)
-18. [Further documentation](#further-documentation)
+9. [Deployment](#deployment)
+10. [API reference](#api-reference)
+11. [Grounding and abstention](#grounding-and-abstention)
+12. [Citations](#citations)
+13. [Evaluation](#evaluation)
+14. [RAGAS](#ragas)
+15. [Testing](#testing)
+16. [Validation example](#validation-example)
+17. [Known limitations](#known-limitations)
+18. [Security and secrets](#security-and-secrets)
+19. [Further documentation](#further-documentation)
 
 ---
 
@@ -61,7 +62,7 @@ chat assistant.
     ▼
 ┌─────────────────────────────┐        HTTP (httpx)         ┌──────────────────────────────┐
 │  Streamlit frontend         │  ───────────────────────►   │  FastAPI backend             │
-│  frontend/app.py            │   GET  /health              │  health.py  (app = FastAPI)  │
+│  frontend/app.py            │   GET  /health              │  main.py    (app = FastAPI)  │
 │  frontend/api_client.py     │   POST /ingest              │  backend/api/*               │
 │                             │   POST /index               │                              │
 │  • upload + index UI        │   POST /ask                 │  ┌────────────────────────┐  │
@@ -85,7 +86,8 @@ The Streamlit app does **not** embed text, query FAISS, rerank, build prompts, o
 call Gemini directly — those all happen behind the API. The frontend only ever
 receives JSON responses, and the Gemini API key never reaches it.
 
-The FastAPI application object is defined in `health.py` as module-level `app`.
+The FastAPI application object is defined in `main.py` (repo root) as
+module-level `app`.
 
 ---
 
@@ -143,7 +145,9 @@ without downloading weights or calling an API.
 
 ## Technology stack
 
-Versions are pinned in `requirements.txt`.
+Versions are pinned in the root `requirements.txt` (the full dev-environment
+aggregate; `backend/requirements.txt` and `frontend/requirements.txt` are slim
+deploy-time subsets — see [Installation](#installation)).
 
 | Area | Library | Version |
 | --- | --- | --- |
@@ -171,11 +175,12 @@ CPU-only PyTorch is installed separately (see [Installation](#installation)).
 
 ```
 research-paper-rag/
-├── health.py                  # FastAPI app: mounts routers, GET / and /health
-├── requirements.txt
+├── main.py                    # FastAPI app: mounts routers, GET / and /health
+├── requirements.txt           # full dev aggregate (local dev, tests, evaluation)
 ├── pytest.ini                 # pytest config + `slow` / `live` markers
 ├── .env.example               # environment variable template (no secrets)
 ├── backend/
+│   ├── requirements.txt       # slim deploy-time deps (backend service only)
 │   ├── core/                  # shared models + environment-backed config
 │   ├── ingestion/             # pdfplumber extraction + page-aware chunking
 │   ├── embeddings/            # Sentence-Transformer embedder (MiniLM)
@@ -185,6 +190,9 @@ research-paper-rag/
 │   ├── rag/                   # orchestration, grounded prompt, citations
 │   └── api/                   # /ingest, /index, /search, /ask routes
 ├── frontend/                  # Streamlit app + HTTP client (thin client)
+│   ├── requirements.txt       # slim deploy-time deps (Streamlit Cloud only)
+│   ├── app.py                 # Streamlit UI
+│   └── api_client.py          # HTTP client for the backend API
 ├── evaluation/
 │   ├── questions.json         # locked ground-truth dataset (15 questions)
 │   ├── run_evaluation.py      # real-pipeline evaluation harness
@@ -204,19 +212,31 @@ research-paper-rag/
 Requires Python 3.12 and an internet connection for the first model download and
 PyTorch install.
 
+There are **three requirements files** in this repository, and they are not
+interchangeable:
+
+| File | What it is | When to use it |
+| --- | --- | --- |
+| `requirements.txt` (root) | Full dev-environment aggregate | **Local development**, running the test suite, and running the evaluation harness. Install this if you want to work on the whole project. |
+| `backend/requirements.txt` | Slim, backend-only subset | **Deploy-time only**: deploying the FastAPI service (Render/Railway). Not meant for local full-repo development. |
+| `frontend/requirements.txt` | Slim, frontend-only subset | **Deploy-time only**: deploying the Streamlit app (Streamlit Community Cloud). Not meant for local full-repo development. |
+
+> **Local development installs from the root `requirements.txt`** — not the
+> backend/frontend ones. Those two are deploy-time subsets; installing just one
+> of them locally will leave you missing packages needed by `tests/` and
+> `evaluation/`.
+
 ```bash
-# 1. Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+# Local development: create a virtual environment and install the FULL root
+# requirements (tests and evaluation need packages absent from the subsets)
+python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+                                    # Windows: .venv\Scripts\activate
 
-# 2. Install the pinned dependencies
-pip install -r requirements.txt
-
-# 3. Install CPU-only PyTorch (kept separate so the default CUDA wheels and
-#    multi-GB nvidia-* dependencies are not pulled on Linux)
+# Install CPU-only PyTorch (kept separate so the default CUDA wheels and
+# multi-GB nvidia-* dependencies are not pulled on Linux)
 pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu
 
-# 4. Create your environment file
+# Create your environment file
 cp .env.example .env               # then edit .env and add your GEMINI_API_KEY
 ```
 
@@ -247,7 +267,7 @@ Real environment variables take precedence over `.env` values.
 From the project root, with the virtual environment active:
 
 ```bash
-uvicorn health:app --reload --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
 Verify it is up:
@@ -290,6 +310,44 @@ reachable") with a **Check connection** button.
 Only one paper is active in the UI at a time: indexing a new PDF replaces the
 previous index (the client sends `reset=true`). Use **Clear paper** to reset the
 UI state.
+
+---
+
+## Deployment
+
+This project is deployed as **two separate services** (backend API + Streamlit
+frontend), each with its own slim dependency list (`backend/requirements.txt`
+and `frontend/requirements.txt`), to keep deploy times and container sizes
+down. The root `requirements.txt` is the full aggregate used for local
+development, testing, and evaluation.
+
+### Backend (Render / Railway)
+
+* **Root Directory:** keep it at the repository root (do not set it to
+  `backend/` — the app is started as `main:app` from the repo root).
+* **Build command:**
+
+  ```bash
+  pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu -r backend/requirements.txt
+  ```
+
+* **Start command:**
+
+  ```bash
+  uvicorn main:app --host 0.0.0.0 --port $PORT
+  ```
+
+* Set `GEMINI_API_KEY` as an environment variable/secret in the service
+  dashboard (see [Security and secrets](#security-and-secrets)).
+
+### Frontend (Streamlit Community Cloud)
+
+* **Main file path:** `frontend/app.py`.
+* Streamlit Cloud auto-detects `frontend/requirements.txt` since it sits
+  alongside the main file — no extra configuration needed.
+* Set `BACKEND_URL` as a Streamlit Cloud **secret**, not hardcoded in the app:
+  on Streamlit Cloud the backend lives at its deployed URL, not the local
+  default `http://localhost:8000`.
 
 ---
 
@@ -553,9 +611,8 @@ python evaluation/ragas_eval.py
 
 ## Testing
 
-The suite uses `pytest` (16 `test_*.py` modules plus shared fixtures/fakes,
-covering ingestion, chunking, embeddings, FAISS, reranking, prompting, the RAG
-service, the API, and the frontend).
+The suite uses `pytest` (18 test files covering ingestion, chunking, embeddings,
+FAISS, reranking, prompting, the RAG service, the API, and the frontend).
 `pytest.ini` registers `slow` (real model weights) and `live` (real Gemini) markers.
 
 ```bash

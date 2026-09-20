@@ -1,0 +1,28 @@
+# Subset of root requirements.txt — keep versions in sync manually on upgrade.
+# Slim, deploy-time list for the FastAPI backend service (Render/Railway).
+# For local development, tests and evaluation install the ROOT requirements.txt
+# instead — this file intentionally omits frontend, dev and evaluation packages.
+#
+# Runtime
+fastapi==0.141.1
+uvicorn==0.53.0
+pdfplumber==0.11.10
+# Bumped from 0.3.11: the RAGAS stack pulls langchain 1.x, which requires 1.x.
+# The page-aware chunker's RecursiveCharacterTextSplitter API is unchanged.
+langchain-text-splitters==1.1.2
+# Required by FastAPI's multipart/form-data file uploads (/ingest, /index).
+python-multipart==0.0.20
+# Imported lazily inside backend/embeddings and backend/reranking.
+sentence-transformers==6.0.1
+faiss-cpu==1.15.1
+numpy==2.5.3
+# Gemini SDK: "google-generativeai" is deprecated/EOL (2025-11-30); google-genai is
+# the supported client and its own docs advise keeping the version below 3.0.0.
+# (Imported lazily inside backend/llm/client.py.)
+google-genai==2.24.0
+python-dotenv==1.2.3
+
+# torch is NOT listed here: it is installed separately in the deploy build
+# command with the CPU-only index URL, because the default Linux wheels bundle
+# CUDA and pull multi-GB nvidia-* dependencies:
+#   pip install torch==2.14.0 --index-url https://download.pytorch.org/whl/cpu

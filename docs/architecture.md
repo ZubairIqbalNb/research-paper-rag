@@ -56,7 +56,7 @@ retrieval.
 | Layer | Module(s) | Responsibility |
 | --- | --- | --- |
 | Frontend | `frontend/app.py`, `frontend/api_client.py` | Streamlit UI; HTTP client. No RAG logic. |
-| API | `health.py`, `backend/api/*.py` | FastAPI app, routes, request validation, error mapping. |
+| API | `main.py`, `backend/api/*.py` | FastAPI app, routes, request validation, error mapping. |
 | Ingestion | `backend/ingestion/*.py` | `pdfplumber` extraction and page-aware chunking. |
 | Embeddings | `backend/embeddings/embedder.py` | Text → L2-normalized `float32` vectors. |
 | Vector store | `backend/retrieval/vector_store.py` | FAISS index + JSON metadata, persistence. |
@@ -80,8 +80,8 @@ backend owns every model and every piece of state. The client talks to:
 * `POST /ask` — grounded answer with citations and evidence.
 
 The client also surfaces the backend's user-safe error messages (415/422/404/500/502/503)
-and omits the internal prompt. The FastAPI app object is defined in `health.py`
-as module-level `app` (so an ASGI server targets `health:app`); the client's
+and omits the internal prompt. The FastAPI app object is defined in `main.py`
+as module-level `app` (so an ASGI server targets `main:app`); the client's
 backend address defaults to `http://localhost:8000` and is overridable with the
 `BACKEND_URL` environment variable.
 
