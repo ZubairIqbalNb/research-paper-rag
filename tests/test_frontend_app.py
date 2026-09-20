@@ -9,6 +9,9 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from frontend import api_client
+from frontend import app as frontend_app
+
 APP_PATH = Path(__file__).resolve().parents[1] / "frontend" / "app.py"
 # A closed port: connecting fails instantly, keeping the tests fast and offline.
 UNREACHABLE_BACKEND = "http://127.0.0.1:9"
@@ -212,3 +215,75 @@ class TestAnswerRendering:
 
         markdown = " ".join(block.value for block in at.markdown)
         assert "**Sources**" not in markdown
+
+
+# ------------------------------------------------------- question validation
+class TestQuestionValidation:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [("", False), ("   ", False), ("hello", True), (" hello ", True)],
+    )
+    def test_validity_uses_the_stripped_value(self, value, expected):
+        assert frontend_app._question_is_valid(value) is expected
+
+    @pytest.mark.parametrize(
+        ("value", "color"),
+        [
+            ("", frontend_app.QUESTION_INVALID_COLOR),
+            ("   ", frontend_app.QUESTION_INVALID_COLOR),
+            ("hello", frontend_app.QUESTION_VALID_COLOR),
+            (" hello ", frontend_app.QUESTION_VALID_COLOR),
+        ],
+    )
+    def test_outline_tracks_the_current_text(self, value, color):
+        at = _run(indexed=INDEXED, backend_ok=True)
+
+        at.text_input[0].set_value(value).run()
+
+        markup = " ".join(block.value for block in at.markdown)
+        other = (
+            frontend_app.QUESTION_VALID_COLOR
+            if color == frontend_app.QUESTION_INVALID_COLOR
+            else frontend_app.QUESTION_INVALID_COLOR
+        )
+        assert color in markup
+        assert other not in markup
+
+
+# --------------------------------------------------- active paper after index
+class TestActivePaperAfterIndexing:
+    def test_sidebar_shows_the_paper_as_soon_as_indexing_succeeds(self, monkeypatch):
+        result = api_client.IndexResult(
+            source="1512.03385v1.pdf",
+            num_pages=12,
+            num_chunks=70,
+            total_vectors=70,
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+        )
+        monkeypatch.setattr(
+            api_client,
+            "ingest_pdf",
+            lambda filename, data, **kwargs: {
+                "source": filename,
+                "num_pages": 12,
+                "num_chunks": 70,
+            },
+        )
+        monkeypatch.setattr(
+            api_client, "index_pdf", lambda filename, data, **kwargs: result
+        )
+
+        at = AppTest.from_file(str(APP_PATH), default_timeout=30)
+        at.session_state["backend_ok"] = True
+        at.run()
+        at.file_uploader[0].upload("1512.03385v1.pdf", b"%PDF-1.4 fake").run()
+
+        next(
+            button for button in at.button if button.label == "Ingest and index this paper"
+        ).click().run()
+
+        assert not at.exception
+        sidebar = " ".join(block.value for block in at.sidebar.markdown)
+        assert "No paper indexed yet." not in sidebar
+        assert "1512.03385v1.pdf" in sidebar
+        assert at.session_state["indexed"]["total_vectors"] == 70

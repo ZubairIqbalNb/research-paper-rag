@@ -31,6 +31,14 @@ PAGE_DESCRIPTION = (
 )
 UNSUPPORTED_FILE_HINT = "Only PDF files are supported."
 
+# Question-input validation. The outline must describe the text currently in the
+# box - not whether a previous submission failed - so it is recomputed from the
+# live widget value on every rerun and applied through the widget's
+# ``st-key-<key>`` container class (see ``_question_outline_style``).
+QUESTION_INPUT_KEY = "question_input"
+QUESTION_VALID_COLOR = "#2e7d32"  # green outline for a usable question
+QUESTION_INVALID_COLOR = "#c62828"  # red outline for empty/whitespace-only text
+
 
 # --------------------------------------------------------------- session state
 def _init_state() -> None:
@@ -123,6 +131,32 @@ def _handle_ask(question: str) -> None:
 
     st.session_state.answer = answer
     st.session_state.asked_question = question
+
+
+# ---------------------------------------------------------------- validation
+def _question_is_valid(question: str | None) -> bool:
+    """A question is usable only when it has non-whitespace content."""
+    return bool((question or "").strip())
+
+
+def _question_outline_style(is_valid: bool) -> str:
+    """Return CSS that outlines the question box green (valid) or red (invalid).
+
+    Streamlit offers no native, server-rendered validation styling, and the
+    colour has to follow the *current* text, so it is derived from the live
+    widget value on each rerun and scoped to the question widget's
+    ``st-key-<key>`` container.
+    """
+    border = QUESTION_VALID_COLOR if is_valid else QUESTION_INVALID_COLOR
+    selector = f".st-key-{QUESTION_INPUT_KEY} div[data-baseweb='input']"
+    return (
+        "<style>"
+        f"{selector} {{ border: 2px solid {border} !important;"
+        " border-radius: 0.5rem; }"
+        f"{selector}:focus-within {{ border-color: {border} !important;"
+        " box-shadow: none; }"
+        "</style>"
+    )
 
 
 # ------------------------------------------------------------------ rendering
@@ -265,7 +299,6 @@ def main() -> None:
 
     st.title(PAGE_TITLE)
     st.write(PAGE_DESCRIPTION)
-    _render_sidebar()
 
     st.header("1. Upload a paper")
     uploaded = st.file_uploader(
@@ -280,19 +313,31 @@ def main() -> None:
         if st.button("Ingest and index this paper", type="primary"):
             _handle_index(uploaded)
 
+    # Rendered after the upload/index step so a paper indexed on this very
+    # interaction shows up in the sidebar immediately, without waiting for the
+    # next rerun (or for a question to be asked).
+    _render_sidebar()
+
     _render_index_status()
 
     st.header("2. Ask a question")
     if not st.session_state.get("indexed"):
         st.info("Upload and index a paper first, then ask questions about it.")
     else:
-        with st.form("ask_form"):
-            question = st.text_input(
-                "Your question about the paper",
-                placeholder="e.g. What problem does this paper address?",
-            )
-            submitted = st.form_submit_button("Ask", type="primary")
-        if submitted:
+        # Deliberately outside ``st.form``: form widgets only commit on submit,
+        # which would stop the outline below from tracking the text as the user
+        # types or pastes. ``live`` commits on every change for instant feedback.
+        question = st.text_input(
+            "Your question about the paper",
+            placeholder="e.g. What problem does this paper address?",
+            key=QUESTION_INPUT_KEY,
+            live="0ms",
+        )
+        st.markdown(
+            _question_outline_style(_question_is_valid(question)),
+            unsafe_allow_html=True,
+        )
+        if st.button("Ask", type="primary"):
             _handle_ask(question)
 
     _render_answer()
